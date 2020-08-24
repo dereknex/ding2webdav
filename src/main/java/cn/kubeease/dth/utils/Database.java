@@ -5,9 +5,14 @@ import com.google.common.flogger.FluentLogger;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.*;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Stream;
 
 public class Database {
 
@@ -25,11 +30,21 @@ public class Database {
 
     private String scriptPath;
 
-    public String getScriptPath() {
-        if (scriptPath==null || scriptPath.isBlank()){
-            ClassLoader loader = Database.class.getClassLoader();
-            URL url = loader.getResource("data");
-            scriptPath = url.getPath();
+    public Path getScriptPath() throws IOException, URISyntaxException {
+
+        URI uri = Database.class.getResource("/data").toURI();
+        Path scriptPath;
+        if (uri.getScheme().equals("jar")) {
+            FileSystem fileSystem;
+            try {
+                fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
+            } catch (FileSystemAlreadyExistsException e) {
+                fileSystem = FileSystems.getFileSystem(uri);
+            }
+//            FileSystem fileSystem = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap());
+            scriptPath = fileSystem.getPath("/data");
+        } else {
+            scriptPath = Paths.get(uri);
         }
         return scriptPath;
     }
@@ -62,26 +77,37 @@ public class Database {
         return 0;
     }
 
-    protected String[] findScripts(){
-        File dir = new File(this.getScriptPath());
-        String[] files = dir.list(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.endsWith(".sql");
-            }
-        });
-        return files;
+    protected Path[] findScripts() throws URISyntaxException, IOException {
+//        File dir = new File(this.getScriptPath());
+//        String[] files = dir.list(new FilenameFilter() {
+//            @Override
+//            public boolean accept(File dir, String name) {
+//                System.out.println(dir+name);
+//                return name.endsWith(".sql");
+//            }
+//        });
+        Path scriptPath = this.getScriptPath();
+        Stream<Path> walk = Files.walk(scriptPath, 1);
+        List<Path> files = new ArrayList<>();
+
+        for (Iterator<Path> it = walk.iterator(); it.hasNext();){
+            Path p = it.next();
+            if (p != scriptPath)
+                files.add(p);
+        }
+        return files.toArray(new Path[0]);
     }
 
-    public void migrate() throws SQLException {
-        String dataPath = this.getScriptPath();
-        String[] scripts = this.findScripts();
+    public void migrate() throws SQLException, IOException, URISyntaxException {
+        Path dataPath = this.getScriptPath();
+        Path[] scripts = this.findScripts();
         Arrays.sort(scripts, new ScriptComarator());
         int currentVer = this.getVersion();
-        for (String script: scripts){
-            int ver = Integer.parseInt(script.substring(0,script.indexOf("_")));
+        for (Path script: scripts){
+            String fileName = script.getFileName().toString();
+            int ver = Integer.parseInt(fileName.substring(0,fileName.indexOf("_")));
             if (ver > currentVer){
-                this.runScript(dataPath + File.separator + script);
+                this.runScript(script.toString());
                 String sql = "insert into migration(ver,update_at) values(?,?)";
                 PreparedStatement stmt = this.getConnection().prepareStatement(sql);
                 stmt.setLong(1, ver);
@@ -117,9 +143,11 @@ public class Database {
 
     }
 
-    static class ScriptComarator implements Comparator<String> {
+    static class ScriptComarator implements Comparator<Path> {
         @Override
-        public int compare(String o1, String o2) {
+        public int compare(Path p1, Path p2) {
+            String o1 = p1.getFileName().toString();
+            String o2 = p2.getFileName().toString();
             Integer i1 =  Integer.parseInt(o1.substring(0,o1.indexOf("_")));
             Integer i2 = Integer.parseInt(o2.substring(0,o2.indexOf("_")));
             return i1 - i2;
