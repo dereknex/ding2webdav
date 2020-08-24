@@ -5,4 +5,9 @@
 ## 用法
 
 * 运行Jar文件
+
 `java -jar dingtalkhelper.jar  config.yaml`
+
+* Docker
+
+`docker run -it -v $(pwd)/config.yaml:/config.yaml derekamz/dingtalkhelper /config.yaml`
