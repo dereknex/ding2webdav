@@ -1,0 +1,8 @@
+corpID: 5292536b5f58bc64cc9e32f36788ba9c
+appKey: 123456
+appSecret: 4b4190c4acba66caf2569195eb729dea
+dingTalkURL: https://oapi.dingtalk.com
+webDavHost: https://webdav.example.com
+webDavPath: /remote.php/dav/addressbooks/users/foo/
+webDavUser: admin
+webDavPassword: admin
