@@ -116,6 +116,13 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>
+                                cn.kubeease.dth.DingTalkHelper
+                            </mainClass>
+                        </manifest>
+                    </archive>
                 </configuration>
 
                 <executions>
