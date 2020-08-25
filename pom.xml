@@ -29,12 +29,6 @@
         </repository>
     </repositories>
     <dependencies>
-<!--        <dependency>-->
-<!--            <groupId>org.graalvm.sdk</groupId>-->
-<!--            <artifactId>graal-sdk</artifactId>-->
-<!--            <version>${graalvm.version}</version>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
@@ -46,9 +40,9 @@
             <version>0.11.0</version>
         </dependency>
         <dependency>
-            <groupId>commons-httpclient</groupId>
-            <artifactId>commons-httpclient</artifactId>
-            <version>3.1</version>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.12</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jackrabbit</groupId>
