@@ -1,6 +1,6 @@
-# dingtalkhelper
+# ding2webdav
 
-目前只支持单向导出钉钉通信录至webdav。
+单向导出钉钉通信录至webdav。
 
 ## 用法
 
