@@ -1,6 +1,6 @@
 # ding2webdav
 
-单向导出钉钉通信录至webdav。
+单向同步钉钉通信录至webdav。
 
 ## 用法
 
