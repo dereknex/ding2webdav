@@ -253,6 +253,7 @@ public class UserSync extends BaseSync implements Sync {
             u.setString(1, UserStatus.RemoteRemoved.getStatus());
             u.setString(2, syncAt);
             u.execute();
+            u.close();
 
             q = this.getConnection().prepareStatement(queryRemoved);
             q.setString(1, UserStatus.RemoteRemoved.getStatus());
@@ -260,6 +261,8 @@ public class UserSync extends BaseSync implements Sync {
             while(rs.next()){
                 this.removeUserWithID(rs.getString(1));
             }
+            rs.close();
+            q.close();
 
         } catch (SQLException e) {
             logger.atSevere().withCause(e);
@@ -274,6 +277,7 @@ public class UserSync extends BaseSync implements Sync {
                 d = this.getConnection().prepareStatement("delete from user where id=?");
                 d.setString(1, ID);
                 d.execute();
+                d.close();
             }catch (SQLException e){
                 logger.atSevere().withCause(e);
             }
