@@ -4,7 +4,7 @@ public enum UserStatus {
     Normal("normal"),
     RemoteRemoved("remote_removed");
 
-    private String status;
+    private final String status;
 
     UserStatus(String status){
         this.status = status;

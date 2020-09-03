@@ -4,6 +4,7 @@ import com.dingtalk.api.DefaultDingTalkClient;
 import com.dingtalk.api.DingTalkClient;
 import com.dingtalk.api.request.OapiDepartmentListRequest;
 import com.dingtalk.api.response.OapiDepartmentListResponse;
+import com.google.common.flogger.FluentLogger;
 import com.taobao.api.ApiException;
 
 import java.sql.PreparedStatement;
@@ -11,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import com.google.common.flogger.FluentLogger;
 
 public class DepartmentSync extends BaseSync implements Sync {
 

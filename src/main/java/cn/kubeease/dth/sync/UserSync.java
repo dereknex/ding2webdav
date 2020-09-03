@@ -1,15 +1,5 @@
 package cn.kubeease.dth.sync;
 
-import java.io.IOException;
-import java.sql.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.TimeZone;
-
 import cn.kubeease.dth.UserStatus;
 import cn.kubeease.dth.webdav.WebDavClient;
 import com.dingtalk.api.DefaultDingTalkClient;
@@ -22,10 +12,15 @@ import com.taobao.api.ApiException;
 import ezvcard.VCard;
 import ezvcard.parameter.EmailType;
 import ezvcard.parameter.TelephoneType;
-import ezvcard.property.Address;
-import ezvcard.property.Organization;
-import ezvcard.property.Profile;
-import ezvcard.property.VCardProperty;
+
+import java.io.IOException;
+import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
 
 public class UserSync extends BaseSync implements Sync {
 
@@ -244,10 +239,10 @@ public class UserSync extends BaseSync implements Sync {
     }
 
     protected void cleanup(String syncAt){
-        String sql = "update user set status='?' where at!='?'";
+        String sql = "update user set status='?' where update_at<>'?'";
         String queryRemoved = "select id from user where status='?'";
-        PreparedStatement u = null;
-        PreparedStatement q = null;
+        PreparedStatement u ;
+        PreparedStatement q ;
         try {
             u = this.getConnection().prepareStatement(sql);
             u.setString(1, UserStatus.RemoteRemoved.getStatus());
@@ -272,7 +267,7 @@ public class UserSync extends BaseSync implements Sync {
 
     protected void removeUserWithID(String ID){
         if (this.webDavClient.removeCardWithName(ID)){
-            PreparedStatement d = null;
+            PreparedStatement d ;
             try{
                 d = this.getConnection().prepareStatement("delete from user where id=?");
                 d.setString(1, ID);

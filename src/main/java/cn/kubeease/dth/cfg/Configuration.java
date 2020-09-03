@@ -9,6 +9,7 @@ public final class Configuration {
     private String webDavPath;
     private String webDavUser;
     private String webDavPassword;
+    private String dataPath;
 
     public String getCorpID() {
         return this.corpID;
@@ -73,5 +74,8 @@ public final class Configuration {
     public void setWebDavPassword(String password) {
         this.webDavPassword = password;
     }
+
+    public String getDataPath() { return this.dataPath;}
+    public void setDataPath(String path) { this.dataPath = path;}
 
 }

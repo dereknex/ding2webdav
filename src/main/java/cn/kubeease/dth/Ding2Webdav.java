@@ -32,7 +32,7 @@ public class Ding2Webdav {
         String accessToken = helper.requestAccessToken(cfg);
         // Init Database
         Database db = new Database();
-        Connection connection = DriverManager.getConnection("jdbc:sqlite:data.db");
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:"+cfg.getDataPath()+"data.db");
         db.setConnection(connection);
         db.migrate();
         // Sync departments

@@ -39,7 +39,8 @@ public class WebDavClient {
 
     public int uploadCard(VCard card) throws IOException {
         HttpPut put = new HttpPut(this.host + this.path+ card.getExtendedProperty("userID").getValue().strip());
-        put.setEntity(new StringEntity(Ezvcard.write(card).version(VCardVersion.V4_0).go()));
+        StringEntity body= new StringEntity(Ezvcard.write(card).version(VCardVersion.V4_0).go(),"UTF-8");
+        put.setEntity(body);
         HttpResponse res = this.httpClient.execute(put);
         int code = res.getStatusLine().getStatusCode();
         if (code>=400){
