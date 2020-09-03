@@ -6,7 +6,7 @@
 
 * 运行Jar文件
 
-`java -jar dingtalkhelper.jar  config.yaml`
+`java -jar ding2webdav.jar  config.yaml`
 
 * Docker
 
