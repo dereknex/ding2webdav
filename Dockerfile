@@ -8,5 +8,5 @@ RUN mvn package
 
 # Step : Package image
 FROM adoptopenjdk/openjdk11-openj9:jre
-CMD exec java $JAVA_OPTS -jar /app/dingtalkhelper.jar
-COPY --from=target /build/target/*jar-with-dependencies.jar /app/dingtalkhelper.jar
+CMD exec java $JAVA_OPTS -jar /app/ding2webdav.jar
+COPY --from=target /build/target/*jar-with-dependencies.jar /app/ding2webdav.jar
