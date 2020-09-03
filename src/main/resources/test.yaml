@@ -6,3 +6,4 @@ webDavHost: https://webdav.example.com
 webDavPath: /remote.php/dav/addressbooks/users/foo/
 webDavUser: admin
 webDavPassword: admin
+dataPath:

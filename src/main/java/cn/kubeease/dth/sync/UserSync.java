@@ -1,14 +1,6 @@
 package cn.kubeease.dth.sync;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-import java.util.ArrayList;
-
+import cn.kubeease.dth.UserStatus;
 import cn.kubeease.dth.webdav.WebDavClient;
 import com.dingtalk.api.DefaultDingTalkClient;
 import com.dingtalk.api.DingTalkClient;
@@ -20,10 +12,15 @@ import com.taobao.api.ApiException;
 import ezvcard.VCard;
 import ezvcard.parameter.EmailType;
 import ezvcard.parameter.TelephoneType;
-import ezvcard.property.Address;
-import ezvcard.property.Organization;
-import ezvcard.property.Profile;
-import ezvcard.property.VCardProperty;
+
+import java.io.IOException;
+import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
 
 public class UserSync extends BaseSync implements Sync {
 
@@ -55,9 +52,9 @@ public class UserSync extends BaseSync implements Sync {
         return response.getUserlist();
     }
 
-    public void saveUsers(final List<OapiUserListbypageResponse.Userlist> users, final String departmentName) {
+    public void saveUsers(final List<OapiUserListbypageResponse.Userlist> users, final String departmentName, final String at) {
         for (final OapiUserListbypageResponse.Userlist u : users) {
-            this.saveUser(u, departmentName);
+            this.saveUser(u, departmentName, at);
             try {
                 this.webDavClient.uploadCard(this.createUserCard(u));
             } catch (IOException e) {
@@ -66,16 +63,17 @@ public class UserSync extends BaseSync implements Sync {
         }
     }
 
-    public void saveUser(final OapiUserListbypageResponse.Userlist user, final String departmentName) {
+    public void saveUser(final OapiUserListbypageResponse.Userlist user, final String departmentName, final String at) {
 
         PreparedStatement stmt = null;
         ResultSet rs = null;
+
         try {
             stmt = this.getConnection().prepareStatement("select * from user where id=?");
             stmt.setString(1, user.getUserid());
             rs = stmt.executeQuery();
             if (!rs.isBeforeFirst()) {
-                this.createUser(user, departmentName);
+                this.createUser(user, departmentName, at);
             } else {
                 this.updateUser(user, departmentName);
             }
@@ -132,10 +130,10 @@ public class UserSync extends BaseSync implements Sync {
         }
     }
 
-    protected void createUser(final OapiUserListbypageResponse.Userlist user, final String departmentName) {
+    protected void createUser(final OapiUserListbypageResponse.Userlist user, final String departmentName, String at) {
         PreparedStatement newStmt = null;
         try {
-            final String sql = "insert into user values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            final String sql = "insert into user values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             newStmt = this.getConnection().prepareStatement(sql);
             newStmt.setString(1, user.getUserid());
             newStmt.setString(2, user.getAvatar());
@@ -151,6 +149,8 @@ public class UserSync extends BaseSync implements Sync {
             newStmt.setString(12, user.getRemark());
             newStmt.setString(13, user.getTel());
             newStmt.setString(14, user.getWorkPlace());
+            newStmt.setString(15, UserStatus.Normal.getStatus());
+            newStmt.setString(16, at);
             newStmt.execute();
         } catch (final SQLException e) {
             logger.atSevere().withCause(e);
@@ -212,6 +212,10 @@ public class UserSync extends BaseSync implements Sync {
 
     @Override
     public void sync() {
+        Date now = new Date();
+        DateFormat iso86_1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        iso86_1.setTimeZone(TimeZone.getTimeZone("UTC"));
+        String at = iso86_1.format(now);
         final List<OapiDepartmentListResponse.Department> departments = this.queryDepartments();
         for (final OapiDepartmentListResponse.Department d : departments) {
             long offset = 0L;
@@ -220,7 +224,7 @@ public class UserSync extends BaseSync implements Sync {
                 while (true) {
                     final List<OapiUserListbypageResponse.Userlist> users = this.downloadWithPage(d.getId(), offset,
                             size);
-                    this.saveUsers(users, d.getName());
+                    this.saveUsers(users, d.getName(), at);
                     if (users.size() < size) {
                         break;
                     }
@@ -231,5 +235,48 @@ public class UserSync extends BaseSync implements Sync {
                 break;
             }
         }
+        this.cleanup(at);
+    }
+
+    protected void cleanup(String syncAt){
+        String sql = "update user set status='?' where update_at<>'?'";
+        String queryRemoved = "select id from user where status='?'";
+        PreparedStatement u ;
+        PreparedStatement q ;
+        try {
+            u = this.getConnection().prepareStatement(sql);
+            u.setString(1, UserStatus.RemoteRemoved.getStatus());
+            u.setString(2, syncAt);
+            u.execute();
+            u.close();
+
+            q = this.getConnection().prepareStatement(queryRemoved);
+            q.setString(1, UserStatus.RemoteRemoved.getStatus());
+            ResultSet rs = q.executeQuery();
+            while(rs.next()){
+                this.removeUserWithID(rs.getString(1));
+            }
+            rs.close();
+            q.close();
+
+        } catch (SQLException e) {
+            logger.atSevere().withCause(e);
+        }
+
+    }
+
+    protected void removeUserWithID(String ID){
+        if (this.webDavClient.removeCardWithName(ID)){
+            PreparedStatement d ;
+            try{
+                d = this.getConnection().prepareStatement("delete from user where id=?");
+                d.setString(1, ID);
+                d.execute();
+                d.close();
+            }catch (SQLException e){
+                logger.atSevere().withCause(e);
+            }
+        }
+
     }
 }

@@ -1,18 +1,17 @@
 package cn.kubeease.dth.utils;
 
 import com.google.common.flogger.FluentLogger;
+import org.reflections.Reflections;
+import org.reflections.scanners.ResourcesScanner;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.*;
+import java.io.InputStream;
 import java.sql.*;
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public class Database {
 
@@ -20,7 +19,7 @@ public class Database {
 
     private Connection connection;
 
-    public void setConnection(Connection c){
+    public void setConnection(Connection c) {
         this.connection = c;
     }
 
@@ -28,86 +27,49 @@ public class Database {
         return connection;
     }
 
-    private String scriptPath;
-
-    public Path getScriptPath() throws IOException, URISyntaxException {
-
-        URI uri = Database.class.getResource("/data").toURI();
-        Path scriptPath;
-        if (uri.getScheme().equals("jar")) {
-            FileSystem fileSystem;
-            try {
-                fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
-            } catch (FileSystemAlreadyExistsException e) {
-                fileSystem = FileSystems.getFileSystem(uri);
-            }
-//            FileSystem fileSystem = FileSystems.newFileSystem(uri, Collections.<String, Object>emptyMap());
-            scriptPath = fileSystem.getPath("/data");
-        } else {
-            scriptPath = Paths.get(uri);
-        }
-        return scriptPath;
-    }
-
-    public boolean isTableExists(String tableName) throws SQLException {
-        String sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
-        PreparedStatement stmt = this.connection.prepareStatement(sql);
-        stmt.setString(1, tableName);
-        ResultSet rs = stmt.executeQuery();
-        if (rs.next()){
-            String name = rs.getString(1);
-           return tableName.equalsIgnoreCase(name);
-        }
-        return false;
-    }
+//    public boolean isTableExists(String tableName) throws SQLException {
+//        String sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
+//        PreparedStatement stmt = this.connection.prepareStatement(sql);
+//        stmt.setString(1, tableName);
+//        ResultSet rs = stmt.executeQuery();
+//        if (rs.next()) {
+//            String name = rs.getString(1);
+//            return tableName.equalsIgnoreCase(name);
+//        }
+//        return false;
+//    }
 
     public int getVersion() {
-        String sql = "select ver from migration order by update_at limit 1";
+        String sql = "select ver from migration order by update_at desc limit 1";
 
         try {
             Statement stmt = this.connection.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
-            if (rs.next()){
+            if (rs.next()) {
                 return rs.getInt(1);
             }
-        } catch (SQLException throwables) {
+        } catch (SQLException e) {
             return 0;
         }
 
         return 0;
     }
 
-    protected Path[] findScripts() throws URISyntaxException, IOException {
-//        File dir = new File(this.getScriptPath());
-//        String[] files = dir.list(new FilenameFilter() {
-//            @Override
-//            public boolean accept(File dir, String name) {
-//                System.out.println(dir+name);
-//                return name.endsWith(".sql");
-//            }
-//        });
-        Path scriptPath = this.getScriptPath();
-        Stream<Path> walk = Files.walk(scriptPath, 1);
-        List<Path> files = new ArrayList<>();
-
-        for (Iterator<Path> it = walk.iterator(); it.hasNext();){
-            Path p = it.next();
-            if (p != scriptPath)
-                files.add(p);
-        }
-        return files.toArray(new Path[0]);
+    protected String[] findScripts()  {
+        Reflections reflections = new Reflections("data/", new ResourcesScanner());
+        Set<String> fileNames = reflections.getResources(Pattern.compile(".*\\.sql"));
+        return fileNames.toArray(new String[0]);
     }
 
-    public void migrate() throws SQLException, IOException, URISyntaxException {
-        Path dataPath = this.getScriptPath();
-        Path[] scripts = this.findScripts();
-        Arrays.sort(scripts, new ScriptComarator());
+    public void migrate() throws SQLException {
+        String[] scripts = this.findScripts();
+        assert scripts!=null;
+        Arrays.sort(scripts, new ScriptComparator());
         int currentVer = this.getVersion();
-        for (Path script: scripts){
-            String fileName = script.getFileName().toString();
-            int ver = Integer.parseInt(fileName.substring(0,fileName.indexOf("_")));
-            if (ver > currentVer){
-                this.runScript(script.toString());
+        for (String script : scripts) {
+            int ver = Integer.parseInt(script.substring(script.lastIndexOf("/")+1, script.indexOf("_")));
+            if (ver > currentVer) {
+                this.runScript(script);
                 String sql = "insert into migration(ver,update_at) values(?,?)";
                 PreparedStatement stmt = this.getConnection().prepareStatement(sql);
                 stmt.setLong(1, ver);
@@ -118,38 +80,40 @@ public class Database {
         }
     }
 
-    public void runScript(String path)  {
+    public void runScript(String file) {
         String delimiter = ";";
         Scanner scanner;
-        try {
-            scanner = new Scanner(new File(path)).useDelimiter(";");
-        } catch (FileNotFoundException e) {
-            logger.atSevere().withCause(e).log("%s not found", path);
-            return;
-        }
+        InputStream is = Database.class.getClassLoader().getResourceAsStream(file);
+        assert is != null;
+        scanner = new Scanner(is).useDelimiter(";");
         Statement stmt;
-        while(scanner.hasNext()){
+        while (scanner.hasNext()) {
             String sql = scanner.next() + delimiter;
             try {
                 stmt = this.getConnection().createStatement();
                 stmt.execute(sql);
                 stmt.close();
-            } catch (SQLException throwables) {
-                logger.atSevere().withCause(throwables).log("Run SQL script error");
+            } catch (SQLException e) {
+                logger.atSevere().withCause(e).log("Run SQL script error");
                 return;
             }
 
         }
-
+        scanner.close();
+        try {
+            is.close();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
-    static class ScriptComarator implements Comparator<Path> {
+    static class ScriptComparator implements Comparator<String> {
         @Override
-        public int compare(Path p1, Path p2) {
-            String o1 = p1.getFileName().toString();
-            String o2 = p2.getFileName().toString();
-            Integer i1 =  Integer.parseInt(o1.substring(0,o1.indexOf("_")));
-            Integer i2 = Integer.parseInt(o2.substring(0,o2.indexOf("_")));
+        public int compare(String o1, String o2) {
+            System.out.println(o1+"  "+ o2);
+            Integer i1 = Integer.parseInt(o1.substring(o1.lastIndexOf("/")+1, o1.indexOf("_")));
+            Integer i2 = Integer.parseInt(o2.substring(o2.lastIndexOf("/")+1, o2.indexOf("_")));
             return i1 - i2;
         }
     }

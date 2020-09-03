@@ -15,7 +15,7 @@ import com.taobao.api.ApiException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
-public class DingTalkHelper {
+public class Ding2Webdav {
 
     private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -28,11 +28,11 @@ public class DingTalkHelper {
         reader.read(args[0]);
         Configuration cfg = reader.getConfig();
 
-        DingTalkHelper helper = new DingTalkHelper();
+        Ding2Webdav helper = new Ding2Webdav();
         String accessToken = helper.requestAccessToken(cfg);
         // Init Database
         Database db = new Database();
-        Connection connection = DriverManager.getConnection("jdbc:sqlite:data.db");
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:"+cfg.getDataPath()+"data.db");
         db.setConnection(connection);
         db.migrate();
         // Sync departments

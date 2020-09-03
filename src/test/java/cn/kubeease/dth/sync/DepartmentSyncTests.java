@@ -6,8 +6,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -22,7 +20,7 @@ public class DepartmentSyncTests {
     }
 
     @BeforeEach
-    public void prepare() throws SQLException, IOException, URISyntaxException {
+    public void prepare() throws SQLException {
         Database db = new Database();
         Connection connection = DriverManager.getConnection("jdbc:sqlite::memory:");
         db.setConnection(connection);
@@ -31,7 +29,7 @@ public class DepartmentSyncTests {
     }
 
     @Test
-    public void testSaveDepartment() throws SQLException {
+    public void testSaveDepartment() {
         OapiDepartmentListResponse.Department d = new OapiDepartmentListResponse.Department();
         d.setId(1L);
         d.setName("test department");
