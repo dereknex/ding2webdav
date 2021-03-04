@@ -56,7 +56,7 @@ public class UserSync extends BaseSync implements Sync {
         for (final OapiUserListbypageResponse.Userlist u : users) {
             this.saveUser(u, departmentName, at);
             try {
-                this.webDavClient.uploadCard(this.createUserCard(u));
+                this.webDavClient.uploadCard(this.createUserCard(u, departmentName));
             } catch (IOException e) {
                 logger.atSevere().withCause(e);
             }
@@ -197,16 +197,19 @@ public class UserSync extends BaseSync implements Sync {
 
     }
 
-    public VCard createUserCard(OapiUserListbypageResponse.Userlist user){
+    public VCard createUserCard(OapiUserListbypageResponse.Userlist user, String departmentName){
         VCard vcard = new VCard();
         vcard.setFormattedName(user.getName());
         vcard.setExtendedProperty("userID",user.getUserid());
-        vcard.addEmail(user.getEmail(), EmailType.PREF);
+        if (user.getEmail() != null && user.getEmail()!= "") {
+            vcard.addEmail(user.getEmail(), EmailType.PREF);
+        }
         vcard.addEmail(user.getOrgEmail(), EmailType.WORK);
         vcard.addTelephoneNumber(user.getMobile(), TelephoneType.VOICE);
         vcard.addTelephoneNumber(user.getTel(), TelephoneType.WORK);
         vcard.addTitle(user.getPosition());
         vcard.setExtendedProperty("jobNumber",user.getJobnumber());
+        vcard.setOrganization(departmentName);
         return vcard;
     }
 

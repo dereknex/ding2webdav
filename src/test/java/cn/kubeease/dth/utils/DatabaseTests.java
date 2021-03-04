@@ -21,7 +21,7 @@ public class DatabaseTests {
     @Test
     public void testFindScripts(){
         String[] scripts = db.findScripts();
-        Assertions.assertEquals(scripts[0], "data/001_initial.sql");
+        Assertions.assertEquals(scripts[scripts.length-1], "data/001_initial.sql");
     }
 
     @Test
